@@ -1,0 +1,13 @@
+section data
+data: buf space 256
+data: buf2 space 257
+start:
+set x0 d_0
+load x1 adr_buf
+set x2 d_256
+sys 63
+set fd d_1
+load source adr_buf
+set arg2 d_256
+sys 64
+exit 0
