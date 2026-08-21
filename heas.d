@@ -22,7 +22,10 @@ void main()
             auto rest = stripped[8..$];
             outf.write(".section ");
             if(rest=="data")
+            {
                 outf.writeln(".data");
+                writeln("data section has been defined.");
+            }
             else
             {
                 write("Error: Unknown section: ");
@@ -31,6 +34,7 @@ void main()
         }
         if(stripped.startsWith("data: "))
         {
+            writeln("data found:");
             auto datarest = stripped[6..$];
             auto dataparts = datarest.split(" ");
             auto name = dataparts[0].strip.idup;
@@ -39,6 +43,12 @@ void main()
             auto type = dataparts[1].strip.idup;
             auto val = dataparts[2].strip.idup;
             auto valstr = val.strip.to!int;
+            write("name: ");
+            writeln(name);
+            write("type: ");
+            writeln(type);
+            write("value: ");
+            writeln(val);
             buffers[name] = valstr;
             if(type=="ascii")
             {
@@ -53,15 +63,21 @@ void main()
         }
         if(stripped.startsWith("start:"))
         {
+            writeln("start found");
             outf.write(".section .text\n.global _start\n_start:\n");
         }
         if(stripped.startsWith("set "))
         {
+            writeln("set found with arguments: ");
             outf.write("mov ");
             auto setrest = stripped[4..$];
             auto setparts = setrest.split(" ");
             auto target = setparts[0].strip.idup;
             auto source = setparts[1].strip.idup;
+            write("target: ");
+            writeln(target);
+            write("source: ");
+            writeln(source);
             if(target=="fd") outf.write("x0,");
             else if(target=="source") outf.write("x1,");
             else if(target=="arg2") outf.write("x2,");
@@ -72,14 +88,28 @@ void main()
                 outf.write(source[2..$]);
                 outf.write("\n");
             }
+            else if(source.startsWith("r_"))
+            {
+                outf.writeln(source[2..$]);
+            }
+            else
+            {
+                writeln("Error: Unknown source type.");
+                writeln(stripped);
+            }
         }
         if(stripped.startsWith("load "))
         {
+            writeln("load found with arguments: ");
             outf.write("ldr ");
             auto loadrest = stripped[5..$];
             auto loadparts = loadrest.split(" ");
             auto ltarget = loadparts[0].strip.idup;
             auto lsource = loadparts[1].strip.idup;
+            write("target: ");
+            writeln(ltarget);
+            write("source: ");
+            writeln(lsource);
             if(ltarget=="fd") outf.write("x0,");
             else if(ltarget=="source") outf.write("x1,");
             else if(ltarget=="arg2") outf.write("x2,");
@@ -99,6 +129,8 @@ void main()
         }
         if(stripped.startsWith("sys "))
         {
+            write("sys found with number: ");
+            writeln(stripped[4..$]);
             auto sysc = stripped[4..$].strip;
             if(sysc=="write")
             {
@@ -121,25 +153,34 @@ void main()
         }
         if(stripped.startsWith("label "))
         {
+            write("label found with name: ");
+            writeln(stripped[6..$]);
             outf.write(stripped[6..$]);
             outf.write(":\n");
         }
         if(stripped.startsWith("call "))
         {
+            write("call found for: ");
+            writeln(stripped[5..$]);
             outf.write("bl ");
             outf.writeln(stripped[5..$]);
         }
         if(stripped.startsWith("ret"))
         {
-            writeln("RET FOUND!");
+            writeln("ret found.");
             outf.write("ret\n");
         }
         if(stripped.startsWith("Read "))
         {
+            writeln("Read found with arguments: ");
             auto rrest = stripped[5..$].strip;
             auto rparts = rrest.split(",");
             auto src = rparts[0].strip.idup;
             auto len = rparts[1].strip.idup;
+            write("source: ");
+            writeln(src);
+            write("length: ");
+            writeln(len);
             auto cmplen = len.strip.to!int;
             if(cmplen>buffers[src])
             {
@@ -158,10 +199,15 @@ void main()
         }
         if(stripped.startsWith("Write "))
         {
+            writeln("Write found with arguments: ");
             auto wrest = stripped[6..$].strip;
             auto wparts = wrest.split(",");
             auto src = wparts[0].strip.idup;
             auto len = wparts[1].strip.idup;
+            write("source: ");
+            writeln(src);
+            write("length: ");
+            writeln(len);
             outf.write("mov x0, #1\nldr x1,=");
             outf.write(src);
             outf.write("\nmov x2, #");
@@ -170,18 +216,30 @@ void main()
         }
         if(stripped.startsWith("add "))
         {
+            writeln("add found with arguments: ");
             auto addrest = stripped[4..$].strip;
             auto addparts = addrest.split(" ");
             auto firstarg = addparts[0].strip.idup;
             auto secndarg = addparts[1].strip.idup;
+            auto rdarg = addparts[2].strip.idup;
+            write("save to: ");
+            writeln(firstarg);
+            write("this plus: ");
+            writeln(secndarg);
+            write("this: ");
+            writeln(rdarg);
             outf.write("add ");
             outf.write(firstarg);
             outf.write(", ");
-            outf.writeln(secndarg);
+            outf.write(secndarg);
+            outf.write(", ");
+            outf.writeln(rdarg);
         }
         if(stripped.startsWith("exit "))
         {
+            write("exit found with return type: ");
             auto rettype = stripped[5..$].strip;
+            writeln(rettype);
             if(rettype=="0")
             {
                 outf.write("mov x0, #0\n");
