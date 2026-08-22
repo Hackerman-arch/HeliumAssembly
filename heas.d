@@ -1,7 +1,7 @@
 import core.stdc.stdlib, std.stdio, std.file, std.string, std.regex, std.algorithm, std.conv;
 
 int[string] buffers;
-
+string[string] asciis;
 void main()
 {
     printf("input filename:");
@@ -36,27 +36,29 @@ void main()
         {
             writeln("data found:");
             auto datarest = stripped[6..$];
-            auto dataparts = datarest.split(" ");
+            auto dataparts = datarest.split(", ");
             auto name = dataparts[0].strip.idup;
             outf.write(name);
             outf.write(": ");
             auto type = dataparts[1].strip.idup;
             auto val = dataparts[2].strip.idup;
-            auto valstr = val.strip.to!int;
             write("name: ");
             writeln(name);
             write("type: ");
             writeln(type);
             write("value: ");
             writeln(val);
-            buffers[name] = valstr;
             if(type=="ascii")
             {
+                auto valascii = val.strip.idup;
+                asciis[name]=valascii;
                 outf.write(".ascii ");
                 outf.writeln(val);
             }
             if(type=="space")
             {
+                auto valstr = val.strip.to!int;
+                buffers[name] = valstr;
                 outf.write(".space ");
                 outf.writeln(val);
             }
@@ -182,7 +184,14 @@ void main()
             write("length: ");
             writeln(len);
             auto cmplen = len.strip.to!int;
-            if(cmplen>buffers[src])
+            auto cmpname = src.strip.idup;
+            if(!(src in asciis))
+            {
+                writeln("Error: Address not found.");
+                writeln(stripped);
+                break;
+            }
+            else if(cmplen>buffers[src])
             {
                 writeln("Error: Programmer attempted to write bytes into a buffer more than the buffer's capacity.");
                 writeln(stripped);
@@ -252,10 +261,49 @@ void main()
             outf.write("mov x8, #93\n");
             outf.writeln("svc #0");
         }
+        if(stripped.startsWith("if "))
+        {
+            write("'if' found with comparison of: ");
+            auto ifrest = stripped[3..$].strip;
+            auto ifparts = ifrest.split(" ");
+            auto firstarg = ifparts[0].strip.idup;
+            auto op = ifparts[1].strip.idup;
+            auto secondarg = ifparts[2].strip.idup;
+            auto label = ifparts[3].strip.idup;
+            write(firstarg);
+            write(op);
+            writeln(secondarg);
+            outf.write("cmp ");
+            outf.write(firstarg);
+            outf.write(",");
+            outf.writeln(secondarg);
+            if(op=="==")
+            {
+                outf.write("beq ");
+                outf.writeln(label);
+            }
+            else if(op=="!=")
+            {
+                outf.write("bne ");
+                outf.writeln(label);
+            }
+            else if(op==">=")
+            {
+                outf.write("bgt ");
+                outf.writeln(label);
+            }
+            else if(op=="<=")
+            {
+                outf.write("blt ");
+                outf.writeln(label);
+            }
+        }
 
     }
+    writeln("ASSEMBLY OUTPUT");
     file.close();
     outf.close();
     system(("as "~outfinp~" -o "~object).toStringz());
     system(("ld "~object~" -o "~exec).toStringz());
+    system(("cat "~outfinp).toStringz());
 }
